@@ -10,7 +10,6 @@ UPLOADED_DIR = "uploaded"
 SLEEP_SECONDS = 5820  # 1 hour 37 minutes
 
 def write_env_files():
-    # If Render (or any host) provides CLIENT_SECRET_JSON or TOKEN_PICKLE, write them to disk
     if "CLIENT_SECRET_JSON" in os.environ and not os.path.exists("client_secret.json"):
         with open("client_secret.json", "w", encoding="utf-8") as f:
             f.write(os.environ["CLIENT_SECRET_JSON"])
@@ -21,7 +20,6 @@ def write_env_files():
             with open("token.pickle", "wb") as f:
                 f.write(b)
         except Exception:
-            # fallback: write raw bytes
             with open("token.pickle", "wb") as f:
                 f.write(data.encode())
 
@@ -42,10 +40,8 @@ def get_credentials():
         with open("token.pickle", "wb") as f:
             pickle.dump(creds, f)
         return creds
-
     if not os.path.exists("client_secret.json"):
         raise FileNotFoundError("client_secret.json missing. Set CLIENT_SECRET_JSON env or upload the file locally.")
-
     flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
     creds = flow.run_local_server(port=0)
     with open("token.pickle", "wb") as f:
@@ -71,11 +67,10 @@ def upload_one(youtube, filepath):
     print(f"Uploaded {filename} -> {resp.get('id')}")
     return resp
 
-def main():
+def worker_loop():
     ensure_dirs()
     creds = get_credentials()
     youtube = build_youtube_service(creds)
-
     while True:
         files = sorted([f for f in os.listdir(VIDEOS_DIR) if f.lower().endswith(".mp4")])
         if files:
@@ -90,5 +85,6 @@ def main():
             print("No videos in folder. Waiting...")
         time.sleep(SLEEP_SECONDS)
 
-if __name__ == "__main__":
-    main()
+# Render worker compatible entry point
+worker_loop()
+
